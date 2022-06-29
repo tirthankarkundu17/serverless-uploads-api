@@ -1,0 +1,52 @@
+# This name will appear in AWS cloud formation
+service: uploads-api
+
+# Serverless Framework Version
+frameworkVersion: '3'
+custom:
+  bucketName: test-upload-bucket123
+  region: us-east-2
+
+# General Lambda configuration goes here
+provider:
+  name: aws
+  runtime: java8.al2 # AWS Linux 2 Corretto 8
+  stage: dev
+  region: ${self:custom.region}
+  # IAM Policies for the function goes here
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "s3:*"
+          Resource: !Sub
+            - arn:aws:s3:::${self:custom.bucketName}/*
+            - BucketName: !Ref UploadBucket
+
+# Package artifact to use for deployment
+package:
+  artifact: target/uploads-api-dev.jar
+
+# Lambda function configuration
+functions:
+  hello:
+    # Handler location
+    handler: in.bitmaskers.handler.GetPresignedURLHandler
+    # Environment variables
+    environment:
+      BUCKET_NAME: ${self:custom.bucketName}
+      REGION: ${self:custom.region}
+    # Use AWS Gateway HTTP API as lambda trigger
+    events:
+      - httpApi:
+          path: /create-presigned-url # Path of API
+          method: post # Method type
+
+# Cloudformation Resource Template
+resources:
+  Resources:
+    UploadBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucketName}
